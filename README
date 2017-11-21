@@ -1,0 +1,78 @@
+This repository contains an Ansible playbook that will deploy LINBIT's
+cluster stack to a pair of nodes, which only need to have IP addresses and
+password-less SSH for root setup on a minimal CentOS  7 install, optionally
+with a common Pacemaker configuration (iscsi, nfs, postgres, etc.).
+
+Quick start:
+  * Install Ansible on your workstation.
+  * Ready two nodes with IP addresses and passwordless SSH for root user.
+  * Update ./linbit-hosts.ini for your environment:
+      drbd_replication_ip
+      mgmt_interface_ip
+      drbd_backing_disk
+      cluster_vip
+      cluster_vip_cidr
+  * Add entries to /etc/hosts pointing linbit-ans-a and linbit-ans-b at your
+    test nodes. Entries should read similar to the following:
+      192.168.7.150   linbit-ans-a
+      192.168.7.151   linbit-ans-b
+  * Run the playbook: $ ansible-playbook linbit-go.yml
+    TIP: If you don't want to be prompted for some/all of the vars, you
+      can pass them in as extra arguements when you run the ansible-playbook
+      using the following syntax (see linbit-go.yml for prompt names):
+      $ ansible-playbook -e cluster_type="iscsi" -e lb_user="joeshmo" \
+        -e lb_pass="SuperSecret!" -e lb_con_id="101" -e lb_clu_id="4395"
+
+Files in this repo:
+  ansible.cfg: this is the configuration for Ansible itself. Ansible looks in
+    the current working directory, home directory, and then finally /etc/, 
+    for it's configurations. The location of the inventory file is all that 
+    should be defined.
+
+  linbit-hosts.ini: this is the inventory file, where we define hosts and the
+    groups they belong to. The hostnames are used by Ansible to run commands over
+    SSH, so these entries must be resolvable by DNS. We MUST define the following:
+    
+    Node specific variables:
+      drbd_replication_ip: each node's IP address for DRBD replication
+      mgmt_interface_ip: each node's IP address for management network
+
+    Cluster variables:
+      ansible_ssh_user=root: we must run as root, so this must be set to root
+      drbd_backing_disk: the disk to be used to back DRBD (data will be destroyed)
+      cluster_vip: the virtual IP for cluster services (won't use if not needed)
+      cluster_vip_cidr: the cidr subnet mask for the cluster_vip
+
+    LINBIT contract variables (will be prompted for these vars from LINBIT):
+      lb_user: http://my.linbit.com portal user
+      lb_pass: http://my.linbit.com portal pass (should prompt for this)
+      lb_con_id: http://my.linbit.com contract ID to register cluster to
+      lb_clu_id: http://my.linbit.com cluster ID to register nodes to
+
+  linbit-go.yml: this is the main playbook that we're going to call. It should
+    execute all the "common" tasks, prompt user for any specific configurations,
+    and then use logic to perform/skip the more specific tasks accordingly. 
+
+  tasks: this directory contains task lists. They're currently broken out, maybe
+    too granularly, so they could be reused if needed.
+
+  scripts: this is a directory for scripts that could be used to perform tasks.
+
+  templates: this is a directory for templates used by tasks. Ansible has a 
+    'template' plugin that uses the jinja templating language to populate variables 
+    from the Ansible environment. The following are template files used to setup 
+    the cluster's configurations.
+      
+Notes:
+
+  I've been trying to create cluster configuration specific tasks that overwrite
+  any previously deployed cluster configurations; for example, currently you could
+  chose to deploy an NFS cluster, and then later deploy an iSCSI cluster over it.
+  This is probably not a good practice, and might be adding a lot of unneeded
+  complexity to the cluster specific task lists. However, still trying for now ;)
+
+  Currently, this is only designed for CentOS 7 targets. Supporting current 
+  Ubuntu, SLES, Debian, RHEL, and CentOS distros is a goal.
+
+Resources:
+  You really only need this: http://docs.ansible.com/ansible/latest/

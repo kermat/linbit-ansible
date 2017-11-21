@@ -1,0 +1,21 @@
+---
+  - name: yum update all system packages to latest
+    yum: name=* state=latest
+
+  - name: check if reboot is needed
+    shell: LAST_KERNEL=$(rpm -q --last kernel | awk 'NR==1{sub(/kernel-/,""); print $1}'); CURRENT_KERNEL=$(uname -r); if [ $LAST_KERNEL != $CURRENT_KERNEL ]; then echo 'reboot'; else echo 'no'; fi
+    ignore_errors: true
+    register: reboot_hint
+
+  - name: rebooting to load new kernel
+    command: bash -c "sleep 5 && reboot"
+    ignore_errors: true
+    async: 1
+    poll: 0
+    when: reboot_hint.stdout.find("reboot") != -1
+    register: reboot_happened
+
+  - name: Waiting for node to reboot
+    local_action: wait_for host={{ ansible_ssh_host }} state=started
+    when: reboot_happened.changed
+

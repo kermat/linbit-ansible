@@ -1,0 +1,7 @@
+---
+  # Insert exclude lines into CentOS 7 Base repos
+  - name: add excludes to base and updates repo.
+    script: scripts/linbit-insert-excludes-centos7.sh
+    when: ansible_distribution == 'CentOS' and ansible_distribution_major_version >= '7'
+
+  # Add more distro support here :)

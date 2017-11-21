@@ -1,0 +1,61 @@
+---
+- hosts: linbit
+  # Prompt to configure a specific cluster
+  vars_prompt:
+    - name: cluster_type
+      prompt: "Specify cluster configuration (nfs, iscsi, or none)"
+      default: "none"
+      private: no
+    - name: lb_user
+      prompt: "http://my.linbit.com username"
+      private: no
+    - name: lb_pass
+      prompt: "http://my.linbit.com password (will not be echoed)"
+      private: yes
+    - name: lb_con_id
+      prompt: "LINBIT Contract ID (provided by LINBIT)"
+      private: no
+    - name: lb_clu_id
+      prompt: "LINBIT Cluster ID (provided by LINBIT)"
+      private: no
+  
+  tasks: 
+  # Put SELinux in permissive mode (log actions, don't block)
+  - name: selinux to permissive
+    selinux:
+      policy: targeted
+      state: permissive
+  
+  # Update system packages to the latest version
+  - import_tasks: tasks/linbit-updates.yml
+  
+  # Register nodes with LINBIT and setup repo access
+  - import_tasks: tasks/linbit-register.yml
+  
+  # Insert exclude lines into repos if needed
+  - import_tasks: tasks/linbit-excludes.yml
+  
+  # Install LINBIT Packages
+  - name: install packages from LINBIT
+    yum: name={{ item }} update_cache=yes state=latest
+    with_items:
+      - kmod-drbd
+      - drbd
+      - drbdmanage
+      - drbdtop
+      - linbit-cluster-stack-corosync2
+  
+  # Add firewall rules for LINBIT cluster stack
+  - import_tasks: tasks/linbit-firewall.yml
+  
+  # Initialize /dev/drbd0
+  - import_tasks: tasks/linbit-drbd-init.yml
+  
+  # Initialize Pacemaker cluster
+  - import_tasks: tasks/linbit-pacemaker-init.yml
+  
+  # Setup the specified cluster
+  - import_tasks: tasks/linbit-nfs.yml
+    when: cluster_type == "nfs"
+  - import_tasks: tasks/linbit-iscsi.yml
+    when: cluster_type == "iscsi"

@@ -1,0 +1,23 @@
+---
+  - name: configure Corosync
+    template: src=../templates/corosync.conf dest=/etc/corosync/corosync.conf
+    register: corosync
+
+  # If corosync.conf was changed, restart pacemaker/corosync
+  - name: restart Pacemaker if Corosync config is new
+    systemd: name=pacemaker state=stopped
+    when: corosync.changed
+
+  - name: restart Corosync if config is new
+    systemd: name=corosync state=restarted 
+    when: corosync.changed
+
+  - name: restart Pacemaker if corosync config is new
+    systemd: name=pacemaker state=started
+    when: corosync.changed
+
+  - name: enable Corosync for boot
+    systemd: name=corosync enabled=yes
+
+  - name: enable Pacemaker for boot
+    systemd: name=pacemaker enabled=yes

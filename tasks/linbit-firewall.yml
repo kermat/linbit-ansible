@@ -1,0 +1,22 @@
+---
+  - name: check if firewalld is running
+    shell: systemctl status firewalld
+    register: firewalld
+
+  - name: firewalld ports for DRBD
+    firewalld: 
+      port: 7788-7999/tcp
+      permanent: true
+      immediate: true
+      state: enabled
+    when: firewalld.rc == 0
+
+  - name: firewalld ports for Pacemaker/Corosync/DLM
+    firewalld: 
+      service: high-availability
+      permanent: true
+      immediate: true
+      state: enabled
+    when: firewalld.rc == 0
+
+  # should add support for iptables/ufw/etc

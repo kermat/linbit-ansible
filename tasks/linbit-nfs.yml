@@ -1,0 +1,92 @@
+---
+  - name: install NFS specific packages
+    yum: name={{ item }} update_cache=yes state=latest
+    with_items:
+      - nfs-utils
+      - rpcbind
+
+  - name: place the cib import file on both nodes
+    template: src=../templates/nfs-cib.txt dest=/root/linbit-cib.txt
+    register: cib_file
+
+  - name: stop all cluster resources for replacement
+    run_once: true
+    shell: crm configure property stop-all-resources=true >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: wait for resources to stop
+    pause:
+      seconds: 40
+    when: cib_file.changed
+  
+  - name: put the cluster into maintenance-mode
+    run_once: true
+    shell: crm configure property maintenance-mode=true >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: check for DRBD device up
+    command: bash -c "drbdadm cstate r0 | grep -q Connected; echo $?"
+    register: drbd0_up
+
+  - name: bring DRBD up in order to format
+    shell: bash -c 'drbdadm up r0' >> /root/linbit-ans-drbd.log
+    when: cib_file.changed and drbd0_up.stdout != 0
+
+  - name: wait for DRBD to connect, then format it XFS
+    shell: bash -c 'while [ $(drbdadm cstate r0) != "Connected" ]; do sleep 1s; done;' >> /root/linbit-ans-drbd.log
+    when: cib_file.changed
+
+  - name: create the filesystem if this is new
+    run_once: true
+    filesystem:
+      fstype: xfs
+      dev: /dev/drbd0
+      force: yes
+    when: cib_file.changed
+
+  - name: take DRBD down to give control back to the cluster
+    shell: bash -c 'drbdadm down r0' >> /root/linbit-ans-drbd.log
+    when: cib_file.changed
+
+  - name: take the cluster out of maintenance-mode
+    run_once: true
+    shell: crm configure property maintenance-mode=false >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: import the cib on one node
+    run_once: true
+    shell: crm configure load replace /root/linbit-cib.txt >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: start cluster resources after replacement
+    run_once: true
+    shell: crm configure property stop-all-resources=false >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+    
+  - name: check if firewalld is running
+    shell: systemctl status firewalld
+    register: firewalld
+
+  - name: allow NFS through firewalld
+    firewalld: 
+      service: nfs
+      permanent: true
+      immediate: true
+      state: enabled
+    when: firewalld.rc == 0
+
+  - name: allow mountd through firewalld
+    firewalld: 
+      service: mountd
+      permanent: true
+      immediate: true
+      state: enabled
+    when: firewalld.rc == 0
+
+  - name: allow rpc-bind through firewalld
+    firewalld: 
+      service: rpc-bind
+      permanent: true
+      immediate: true
+      state: enabled
+    when: firewalld.rc == 0

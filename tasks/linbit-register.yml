@@ -1,0 +1,10 @@
+---
+  - name: fetch the latest linbit-manage-node.py
+    get_url:
+      url: "https://my.linbit.com/linbit-manage-node.py"
+      dest: "/root/linbit-manage-node.py"
+      mode: "0640"
+      force: "yes"
+
+  - name: register nodes using linbit-manage-node.py
+    shell: bash -c "LB_USERNAME={{ lb_user }} LB_PASSWORD={{ lb_pass  }} LB_CONTRACT_ID={{ lb_con_id  }} LB_CLUSTER_ID={{ lb_clu_id }} python /root/linbit-manage-node.py"

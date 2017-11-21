@@ -1,0 +1,41 @@
+---
+  - name: install iSCSI specific packages
+    yum: name={{ item }} update_cache=yes state=latest
+    with_items:
+      - targetcli
+
+  - name: place the cib import file on both nodes
+    template: src=templates/iscsi-cib.txt dest=/root/linbit-cib.txt
+    register: cib_file
+
+  - name: stop all cluster resources for replacement
+    run_once: true
+    shell: crm configure property stop-all-resources=true >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: wait for resources to stop
+    pause:
+      seconds: 40
+    when: cib_file.changed
+  
+  - name: import the cib on one node
+    run_once: true
+    shell: crm configure load replace /root/linbit-cib.txt >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: start cluster resources after replacement
+    run_once: true
+    shell: crm configure property stop-all-resources=false >> /root/linbit-ans-cib-import.log
+    when: cib_file.changed
+
+  - name: check if firewalld is running
+    shell: systemctl status firewalld
+    register: firewalld
+
+  - name: allow iscsi through firewalld
+    firewalld:
+      service: iscsi-target
+      permanent: true
+      immediate: true
+      state: enabled
+    when: firewalld.rc == 0

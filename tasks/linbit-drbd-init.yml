@@ -1,0 +1,26 @@
+---
+  - name: check if drbd0 already present
+    command: bash -c "drbdadm sh-dev all | grep -q drbd0; echo $?"
+    register: drbd0_exists
+
+  - name: configure DRBD device
+    template: src=../templates/r0.res dest=/etc/drbd.d/r0.res
+    register: drbd0_config
+
+  - name: drbdadm create-md in remote shell
+    shell: drbdadm create-md r0 --force >> /root/linbit-ans-drbd.log
+    when: drbd0_exists.stdout == "1"
+
+  - name: drbdadm up in remote shell
+    shell: drbdadm up r0 >> /root/linbit-ans-drbd.log
+    when: drbd0_exists.stdout == "1"
+
+  - name: skip DRBD initial sync
+    run_once: true
+    shell: bash -c 'while [ $(drbdadm cstate r0) != "Connected" ]; do sleep 1s; done; drbdadm new-current-uuid r0 --clear-bitmap' >> /root/linbit-ans-drbd.log
+    when: drbd0_exists.stdout == "1"
+ 
+  # Adjust if configuration changed as catch all
+  - name: drbdadm adjust in remote shell
+    shell: drbdadm adjust r0 >> /root/linbit-ans-drbd.log
+    when: drbd0_config.changed
