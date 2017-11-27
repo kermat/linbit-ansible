@@ -3,6 +3,9 @@ cluster stack to a pair of nodes, which only need to have IP addresses and
 password-less SSH for root setup on a minimal CentOS  7 install, optionally
 with a common Pacemaker configuration (iscsi, nfs, postgres, etc.).
 
+This playbook requires credentials for https://my.linbit.com. Reach out to
+sales_us@linbit.com for more information or to setup an account.
+
 Quick start:
   * Install Ansible on your workstation.
   * Ready two nodes with IP addresses and passwordless SSH for root user.
@@ -21,7 +24,8 @@ Quick start:
       can pass them in as extra arguements when you run the ansible-playbook
       using the following syntax (see linbit-go.yml for prompt names):
       $ ansible-playbook -e cluster_type="iscsi" -e lb_user="joeshmo" \
-        -e lb_pass="SuperSecret!" -e lb_con_id="101" -e lb_clu_id="4395"
+        -e lb_pass="SuperSecret!" -e lb_con_id="101" -e lb_clu_id="4395" \
+        linbit-go.yml
 
 Files in this repo:
   ansible.cfg: this is the configuration for Ansible itself. Ansible looks in
