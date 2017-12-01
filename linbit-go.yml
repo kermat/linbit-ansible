@@ -1,5 +1,8 @@
 ---
 - hosts: linbit
+  # Need to be root for this playbook to work
+  vars:
+    - ansible_ssh_user: root
   # Prompt to configure a specific cluster
   vars_prompt:
     - name: cluster_type
