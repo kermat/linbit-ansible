@@ -1,20 +1,25 @@
 This repository contains an Ansible playbook that will deploy LINBIT's
 cluster stack to a pair of nodes, which only need to have IP addresses and
-password-less SSH for root setup on a minimal CentOS  7 install, optionally
+password-less SSH for root setup on a minimal CentOS 7 install, optionally
 with a common Pacemaker configuration (iscsi, nfs, postgres, etc.).
 
 This playbook requires credentials for https://my.linbit.com. Reach out to
 sales_us@linbit.com for more information or to setup an account.
 
 Quick start:
+------------
   * Install Ansible on your workstation.
-  * Ready two nodes with IP addresses and passwordless SSH for root user.
+  * Ready two nodes with two IP addresses and passwordless SSH for root user.
+      * Each node must have two separate network interfaces; preferably  
+        the interface for DRBD replication is directly connected to the peer.
+      * Each node must have an unused block device, separate from the root
+        volume for DRBD to use as backing storage. 
   * Update ./linbit-hosts.ini for your environment:
-      drbd_replication_ip
-      mgmt_interface_ip
-      drbd_backing_disk
-      cluster_vip
-      cluster_vip_cidr
+      drbd_replication_ip: lower latency replication network
+      mgmt_interface_ip: client/management network 
+      drbd_backing_disk: spare disk for backing DRBD
+      cluster_vip: virtual IP that will move with the Primary
+      cluster_vip_cidr: cidr netmask for the virtual IP
   * Add entries to /etc/hosts pointing linbit-ans-a and linbit-ans-b at your
     test nodes. Entries should read similar to the following:
       192.168.7.150   linbit-ans-a
@@ -24,10 +29,11 @@ Quick start:
       can pass them in as extra arguements when you run the ansible-playbook
       using the following syntax (see linbit-go.yml for prompt names):
       $ ansible-playbook -e cluster_type="iscsi" -e lb_user="joeshmo" \
-        -e lb_pass="SuperSecret!" -e lb_con_id="101" -e lb_clu_id="4395" \
-        linbit-go.yml
+        -e lb_pass="SuperSecret!" -e lb_con_id="101" \
+        -e lb_clu_id="4395" linbit-go.yml
 
 Files in this repo:
+-------------------
   ansible.cfg: this is the configuration for Ansible itself. Ansible looks in
     the current working directory, home directory, and then finally /etc/, 
     for it's configurations. The location of the inventory file is all that 
@@ -68,7 +74,7 @@ Files in this repo:
     the cluster's configurations.
       
 Notes:
-
+------
   I've been trying to create cluster configuration specific tasks that overwrite
   any previously deployed cluster configurations; for example, currently you could
   chose to deploy an NFS cluster, and then later deploy an iSCSI cluster over it.
@@ -79,4 +85,7 @@ Notes:
   Ubuntu, SLES, Debian, RHEL, and CentOS distros is a goal.
 
 Resources:
-  You really only need this: http://docs.ansible.com/ansible/latest/
+----------
+  https://docs.ansible.com/ansible/latest/
+  https://docs.linbit.com/docs/users-guide-9.0/
+  https://clusterlabs.org/doc/
