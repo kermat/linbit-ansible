@@ -4,7 +4,9 @@ password-less SSH for root setup on a minimal CentOS 7 install, optionally
 with a common Pacemaker configuration (iscsi, nfs, postgres, etc.).
 
 This playbook requires credentials for https://my.linbit.com. Reach out to
-sales_us@linbit.com for more information or to setup an account.
+sales@linbit.com for more information or to setup an account. If you do 
+reach out to sales@linbit.com, make sure to include which country or 
+continent you are located in so that the sales people don't get confused ;)
 
 Quick start:
 ------------
